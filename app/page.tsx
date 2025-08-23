@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [agentText, setAgentText] = useState<string>(""); // Explicit type
+  const [agentText, setAgentText] = useState<string>("");
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -28,14 +28,17 @@ export default function Home() {
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
-      const data = (await res.json()) as { message?: string; audio_url?: string; redirect?: boolean; redirect_url?: string };
+      const data = (await res.json()) as {
+        message?: string;
+        audio_url?: string;
+        redirect?: boolean;
+        redirect_url?: string;
+      };
 
       console.log("Backend response:", data);
 
-      // ✅ Set agent message
       setAgentText(data.message || "");
 
-      // 🔊 Play audio if available
       if (data.audio_url) {
         const audio = new Audio(
           `https://backend-agenticai-production.up.railway.app${data.audio_url}`
@@ -87,7 +90,7 @@ export default function Home() {
       console.error("❌ Mic access error:", err);
       alert("Microphone access is required to use voice features.");
     }
-  }, [sendToBackend]); // Added dependency
+  }, [sendToBackend]);
 
   // ⏹ Stop Recording
   const stopRecording = useCallback(() => {
@@ -103,13 +106,13 @@ export default function Home() {
         className="relative h-screen w-full flex items-center justify-center bg-cover bg-center"
         style={{ backgroundImage: "url(/ag_bg.jpg)" }}
       >
-        <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-6xl px-6">
+        <div className="flex flex-col md:flex-row items-center justify-between w-full max-w-6xl px-4 md:px-6">
           {/* LEFT TEXT */}
-          <div className="z-10 max-w-xl text-left flex items-center justify-start ml-28">
-            <div className="transform -translate-y-16 -translate-x-10 animate-fade-in-up">
-              <h1 className="text-4xl md:text-5xl font-bold text-dark leading-tight animate-buddies">
+          <div className="z-10 text-center md:text-left flex items-center justify-center md:justify-start md:ml-12 lg:ml-28 mt-[-50px] md:mt-[-100px]">
+            <div className="transform md:-translate-y-16 animate-fade-in-up">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-dark leading-tight animate-buddies">
                 W E L C O M E <br /> T O <br />{" "}
-                <span className="text-white animate-pulse">
+                <span className="text-yellow-500 animate-pulse">
                   S M A R T <br /> A G R I
                 </span>
               </h1>
@@ -117,8 +120,8 @@ export default function Home() {
           </div>
 
           {/* VOICE AGENT */}
-          <div className="absolute mt-48 md:bottom-[138px] md:right-[196px] z-10">
-            <div className="bg-white md:w-[400px] md:h-[120px] rounded-xl shadow-gray-800 shadow-lg flex flex-col items-start gap-2 px-6 py-4">
+          <div className="absolute bottom-8 md:bottom-[100px] right-1/2 md:right-[100px] translate-x-1/2 md:translate-x-0 z-10">
+            <div className="bg-white w-[90vw] sm:w-[350px] md:w-[400px] md:h-[120px] rounded-xl shadow-gray-800 shadow-lg flex flex-col items-start gap-2 px-4 md:px-6 py-4">
               <div className="flex items-center gap-4">
                 <Image
                   src="/ag_logo.png"
@@ -128,8 +131,12 @@ export default function Home() {
                   className="rounded-full"
                 />
                 <div className="flex flex-col">
-                  <span className="text-red-600 font-bold text-xl">FARM-GENIE...</span>
-                  <span className="text-black font-bold text-xl">here</span>
+                  <span className="text-red-600 font-bold text-lg md:text-xl">
+                    FARM-GENIE...
+                  </span>
+                  <span className="text-black font-bold text-lg md:text-xl">
+                    here
+                  </span>
                 </div>
               </div>
 
@@ -138,14 +145,14 @@ export default function Home() {
                 <button
                   onClick={startRecording}
                   disabled={loading}
-                  className="bg-yellow-500 text-white px-8 py-2 rounded-lg shadow hover:bg-green-600 text-sm disabled:bg-gray-400"
+                  className="bg-yellow-500 text-white px-6 md:px-8 py-2 rounded-lg shadow hover:bg-green-600 text-sm disabled:bg-gray-400 transition"
                 >
                   🎙 {loading ? "Processing..." : "Start Talking"}
                 </button>
               ) : (
                 <button
                   onClick={stopRecording}
-                  className="bg-red-500 text-white px-4 py-1 rounded-lg shadow hover:bg-red-600 text-sm"
+                  className="bg-red-500 text-white px-6 py-2 rounded-lg shadow hover:bg-red-600 text-sm transition"
                 >
                   ⏹ Stop
                 </button>
@@ -157,8 +164,10 @@ export default function Home() {
 
       {/* AGENT TEXT DISPLAY */}
       {agentText && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded shadow w-80 text-center">
-          <p className="text-green-800 font-medium">{agentText}</p>
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-3 md:p-4 rounded shadow w-[85vw] sm:w-80 text-center">
+          <p className="text-green-800 font-medium text-sm md:text-base">
+            {agentText}
+          </p>
         </div>
       )}
 
