@@ -35,7 +35,6 @@ type AgentResponse = {
   };
 };
 
-
 // ---------------- Component ----------------
 export default function IrrigationAdvicePage() {
   const [query, setQuery] = useState("");
@@ -49,77 +48,83 @@ export default function IrrigationAdvicePage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // ✅ Backend URL from ENV
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
   // ----------------- Send audio/text to backend -----------------
-  const fetchAgent = useCallback(async (formData: FormData) => {
-    setLoading(true);
-    setAgentText("");
-    setWeather(null);
-    setSoil(null);
+  const fetchAgent = useCallback(
+    async (formData: FormData) => {
+      setLoading(true);
+      setAgentText("");
+      setWeather(null);
+      setSoil(null);
 
-    try {
-      const res = await fetch("https://backend-agenticai-production.up.railway.app/agent", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-
-      const data: AgentResponse = await res.json(); // API response can still be dynamic
-
-      setAgentText(data.message || "");
-
-      // ---------- Weather ----------
-      if (data.weather) {
-        setWeather({
-          location: data.weather.location?.name || "Unknown",
-          condition: data.weather.current?.condition?.text || "N/A",
-          temp_c: data.weather.current?.temp_c || 0,
+      try {
+        const res = await fetch(`${API_URL}/agent`, {
+          method: "POST",
+          body: formData,
         });
-      } else if (data.message) {
-        const weatherMatch = data.message.match(
-          /Weather in (.*?) is (.*) with temperature ([0-9.]+)°C/
-        );
-        if (weatherMatch) {
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+        const data: AgentResponse = await res.json();
+
+        setAgentText(data.message || "");
+
+        // ---------- Weather ----------
+        if (data.weather) {
           setWeather({
-            location: weatherMatch[1],
-            condition: weatherMatch[2],
-            temp_c: weatherMatch[3],
+            location: data.weather.location?.name || "Unknown",
+            condition: data.weather.current?.condition?.text || "N/A",
+            temp_c: data.weather.current?.temp_c || 0,
           });
+        } else if (data.message) {
+          const weatherMatch = data.message.match(
+            /Weather in (.*?) is (.*) with temperature ([0-9.]+)°C/
+          );
+          if (weatherMatch) {
+            setWeather({
+              location: weatherMatch[1],
+              condition: weatherMatch[2],
+              temp_c: weatherMatch[3],
+            });
+          }
         }
-      }
 
-      // ---------- Soil ----------
-      if (data.soil) {
-        setSoil({
-          moisture: data.soil.moisture || 0,
-          ph: data.soil.ph || 7,
-          nitrogen: data.soil.nitrogen || "medium",
-          phosphorus: data.soil.phosphorus || "medium",
-          potassium: data.soil.potassium || "medium",
-        });
-      } else if (data.message) {
-        const soilMatch = data.message.match(/soil moisture (\d+)%/);
-        if (soilMatch) {
-          setSoil({ moisture: Number(soilMatch[1]) });
+        // ---------- Soil ----------
+        if (data.soil) {
+          setSoil({
+            moisture: data.soil.moisture || 0,
+            ph: data.soil.ph || 7,
+            nitrogen: data.soil.nitrogen || "medium",
+            phosphorus: data.soil.phosphorus || "medium",
+            potassium: data.soil.potassium || "medium",
+          });
+        } else if (data.message) {
+          const soilMatch = data.message.match(/soil moisture (\d+)%/);
+          if (soilMatch) {
+            setSoil({ moisture: Number(soilMatch[1]) });
+          }
         }
-      }
 
-      // ---------- Audio ----------
-      if (data.audio_url) {
-        const audio = new Audio(`https://backend-agenticai-production.up.railway.app${data.audio_url}`);
-        audioRef.current = audio;
-        try {
-          await audio.play();
-        } catch (err) {
-          console.warn("Audio autoplay blocked:", err);
+        // ---------- Audio ----------
+        if (data.audio_url) {
+          const audio = new Audio(`${API_URL}${data.audio_url}`);
+          audioRef.current = audio;
+          try {
+            await audio.play();
+          } catch (err) {
+            console.warn("Audio autoplay blocked:", err);
+          }
         }
+      } catch (err) {
+        console.error("Error:", err);
+        alert("Failed to fetch advice. Try again.");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Error:", err);
-      alert("Failed to fetch advice. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [API_URL]
+  );
 
   // ----------------- Start Recording -----------------
   const startRecording = useCallback(async () => {

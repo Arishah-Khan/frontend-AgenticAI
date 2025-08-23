@@ -13,6 +13,9 @@ export default function Home() {
 
   const router = useRouter();
 
+  // ✅ Backend URL from ENV
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
   // 📡 Send Audio to Backend
   const sendToBackend = useCallback(async () => {
     setLoading(true);
@@ -21,10 +24,10 @@ export default function Home() {
       const formData = new FormData();
       formData.append("audio", audioBlob, "customer_audio.webm");
 
-      const res = await fetch(
-        "https://backend-agenticai-production.up.railway.app/agent",
-        { method: "POST", body: formData }
-      );
+      const res = await fetch(`${API_URL}/agent`, {
+        method: "POST",
+        body: formData,
+      });
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
@@ -40,9 +43,7 @@ export default function Home() {
       setAgentText(data.message || "");
 
       if (data.audio_url) {
-        const audio = new Audio(
-          `https://backend-agenticai-production.up.railway.app${data.audio_url}`
-        );
+        const audio = new Audio(`${API_URL}${data.audio_url}`);
         try {
           await audio.play();
           audio.onended = () => {
@@ -67,7 +68,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, API_URL]);
 
   // 🎙 Start Recording
   const startRecording = useCallback(async () => {
