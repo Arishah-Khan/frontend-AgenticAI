@@ -112,7 +112,7 @@ export default function Home() {
             <div className="transform md:-translate-y-16 animate-fade-in-up">
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-dark leading-tight animate-buddies">
                 W E L C O M E <br /> T O <br />{" "}
-                <span className="text-[#c6e452] animate-pulse">
+                <span className="text-yellow-500 animate-pulse">
                   S M A R T <br /> A G R I
                 </span>
               </h1>
