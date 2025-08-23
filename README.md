@@ -75,7 +75,6 @@ Run backend server:
 uvicorn main:app --reload
 
 
-Backend runs at 👉 https://backend-agenticai-production.up.railway.app/
 
 🔹 2. Frontend (Next.js)
 cd frontend
@@ -83,7 +82,6 @@ npm install
 npm run dev
 
 
-Frontend runs at 👉 https://frontend-agentic-ai.vercel.app/
 
 # 🔗 API Endpoints
 1️⃣ Ask Agent
