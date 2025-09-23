@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
-import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useState, useRef, useCallback } from "react";
 
 export default function Home() {
   const [agentText, setAgentText] = useState<string>("");
@@ -103,6 +103,9 @@ export default function Home() {
 
   return (
     <main className="overflow-hidden">
+
+      <h1>Hello World!</h1>
+      <h2>Hello Amna</h2>
       <section
         className="relative h-screen w-full flex items-center justify-center bg-cover bg-center"
         style={{ backgroundImage: "url(/ag_bg.jpg)" }}
