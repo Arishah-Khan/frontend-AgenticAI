@@ -104,9 +104,7 @@ export default function Home() {
   return (
     <main className="overflow-hidden">
 
-      <h1>Hello World!</h1>
-      <h2>Hello Amna</h2>
-      <h1>Hello Arishah</h1>
+    
       <section
         className="relative h-screen w-full flex items-center justify-center bg-cover bg-center"
         style={{ backgroundImage: "url(/ag_bg.jpg)" }}
