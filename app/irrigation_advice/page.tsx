@@ -1,273 +1,134 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import { useState, useRef, useCallback } from "react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { useState, FormEvent } from 'react';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
-// ---------------- Type Definitions ----------------
-type Weather = {
-  location: string;
-  condition: string;
-  temp_c: number | string;
-};
+interface AgentResponse {
+  message: string;
+  redirect: boolean;
+  redirect_url: string | null;
+  audio_url: string | null;
+}
 
-type Soil = {
-  moisture: number;
-  ph?: number;
-  nitrogen?: string;
-  phosphorus?: string;
-  potassium?: string;
-};
-
-type AgentResponse = {
-  message?: string;
-  audio_url?: string;
-  weather?: {
-    location?: { name?: string };
-    current?: { condition?: { text?: string }; temp_c?: number };
-  };
-  soil?: {
-    moisture?: number;
-    ph?: number;
-    nitrogen?: string;
-    phosphorus?: string;
-    potassium?: string;
-  };
-};
-
-// ---------------- Component ----------------
-export default function IrrigationAdvicePage() {
-  const [query, setQuery] = useState("");
-  const [agentText, setAgentText] = useState("");
+export default function AgentPage() {
+  const [question, setQuestion] = useState('');
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [response, setResponse] = useState<AgentResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [weather, setWeather] = useState<Weather | null>(null);
-  const [soil, setSoil] = useState<Soil | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setResponse(null);
 
-  // ✅ Backend URL from ENV
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-  // ----------------- Send audio/text to backend -----------------
-  const fetchAgent = useCallback(
-    async (formData: FormData) => {
-      setLoading(true);
-      setAgentText("");
-      setWeather(null);
-      setSoil(null);
-
-      try {
-        const res = await fetch(`${API_URL}/agent`, {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
-
-        const data: AgentResponse = await res.json();
-
-        setAgentText(data.message || "");
-
-        // ---------- Weather ----------
-        if (data.weather) {
-          setWeather({
-            location: data.weather.location?.name || "Unknown",
-            condition: data.weather.current?.condition?.text || "N/A",
-            temp_c: data.weather.current?.temp_c || 0,
-          });
-        } else if (data.message) {
-          const weatherMatch = data.message.match(
-            /Weather in (.*?) is (.*) with temperature ([0-9.]+)°C/
-          );
-          if (weatherMatch) {
-            setWeather({
-              location: weatherMatch[1],
-              condition: weatherMatch[2],
-              temp_c: weatherMatch[3],
-            });
-          }
-        }
-
-        // ---------- Soil ----------
-        if (data.soil) {
-          setSoil({
-            moisture: data.soil.moisture || 0,
-            ph: data.soil.ph || 7,
-            nitrogen: data.soil.nitrogen || "medium",
-            phosphorus: data.soil.phosphorus || "medium",
-            potassium: data.soil.potassium || "medium",
-          });
-        } else if (data.message) {
-          const soilMatch = data.message.match(/soil moisture (\d+)%/);
-          if (soilMatch) {
-            setSoil({ moisture: Number(soilMatch[1]) });
-          }
-        }
-
-        // ---------- Audio ----------
-        if (data.audio_url) {
-          const audio = new Audio(`${API_URL}${data.audio_url}`);
-          audioRef.current = audio;
-          try {
-            await audio.play();
-          } catch (err) {
-            console.warn("Audio autoplay blocked:", err);
-          }
-        }
-      } catch (err) {
-        console.error("Error:", err);
-        alert("Failed to fetch advice. Try again.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [API_URL]
-  );
-
-  // ----------------- Start Recording -----------------
-  const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      audioChunksRef.current = [];
+      const formData = new FormData();
+      if (question) {
+        formData.append('question', question);
+      }
+      if (audioFile) {
+        formData.append('audio', audioFile);
+      }
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
+      const res = await axios.post('http://localhost:8000/agent', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      recorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const formData = new FormData();
-        formData.append("audio", audioBlob, "voice.webm");
-        if (query.trim() !== "") formData.append("question", query);
-        await fetchAgent(formData);
-      };
+      const data: AgentResponse = res.data;
+      setResponse(data);
 
-      mediaRecorderRef.current = recorder;
-      recorder.start();
-      setRecording(true);
-    } catch (err) {
-      console.error("Mic access error:", err);
-      alert("Microphone access is required to use voice features.");
+      if (data.redirect && data.redirect_url) {
+        router.push(data.redirect_url);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'An error occurred while processing your request.');
+    } finally {
+      setLoading(false);
     }
-  }, [query, fetchAgent]);
-
-  // ----------------- Stop Recording -----------------
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      setRecording(false);
-    }
-  }, []);
-
-  // ----------------- Handle text submit -----------------
-  const handleSubmit = async () => {
-    if (!query.trim()) return alert("Please enter your question or location");
-    const formData = new FormData();
-    formData.append("question", query);
-    await fetchAgent(formData);
   };
 
-  const COLORS = ["#22c55e", "#e5e7eb"]; // green + gray
+  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAudioFile(file);
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-green-50 flex flex-col items-center p-6 relative">
-      <h1 className="text-3xl font-bold mb-6 text-green-800">🌾 Smart Irrigation Advice</h1>
+    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
+      <div className="bg-white shadow-lg rounded-lg p-8 max-w-2xl w-full">
+        <h1 className="text-3xl font-bold text-green-600 mb-6 text-center">
+          Smart Agri - Irrigation Advisor
+        </h1>
 
-      {/* Text input */}
-      <div className="mb-4 flex gap-2">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Enter location or question"
-          className="border rounded px-4 py-2 w-64"
-        />
-        <button
-          onClick={handleSubmit}
-          className="bg-green-600 text-white px-4 py-2 rounded"
-        >
-          Send
-        </button>
-      </div>
-
-      {/* Voice Agent */}
-      <div className="bg-white md:w-[400px] rounded-xl shadow-lg flex flex-col items-center gap-3 px-6 py-4">
-        <div className="flex items-center gap-4">
-          <Image src="/ag_logo.png" alt="Logo" width={50} height={50} className="rounded-full" />
-          <div className="flex flex-col">
-            <span className="text-red-600 font-bold text-xl">FARM-GENIE...</span>
-            <span className="text-black font-bold text-xl">here</span>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="question" className="block text-sm font-medium text-gray-700">
+              Ask about irrigation or a specific field (e.g., Field A)
+            </label>
+            <input
+              type="text"
+              id="question"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+              placeholder="e.g., Should Field A be irrigated in the next 48 hours?"
+            />
           </div>
-        </div>
 
-        {!recording ? (
+          <div>
+            <label htmlFor="audio" className="block text-sm font-medium text-gray-700">
+              Or upload an audio question
+            </label>
+            <input
+              type="file"
+              id="audio"
+              accept="audio/*"
+              onChange={handleAudioChange}
+              className="mt-1 w-full p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
           <button
-            onClick={startRecording}
-            disabled={loading}
-            className="bg-yellow-500 text-white px-8 py-2 rounded-lg shadow hover:bg-green-600 text-sm"
+            type="submit"
+            disabled={loading || (!question && !audioFile)}
+            className={`w-full py-2 px-4 rounded-md text-white font-semibold ${
+              loading || (!question && !audioFile)
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
           >
-            🎙 {loading ? "Processing..." : "Start Talking"}
+            {loading ? 'Processing...' : 'Submit'}
           </button>
-        ) : (
-          <button
-            onClick={stopRecording}
-            className="bg-red-500 text-white px-4 py-1 rounded-lg shadow hover:bg-red-600 text-sm"
-          >
-            ⏹ Stop
-          </button>
-        )}
-      </div>
+        </form>
 
-      {/* Weather + Soil UI */}
-      <div className="mt-6 w-full max-w-md space-y-4">
-        {weather && (
-          <div className="bg-white p-4 rounded-xl shadow text-center">
-            <h2 className="text-lg font-bold">🌤️ Weather in {weather.location}</h2>
-            <p className="text-gray-700">{weather.condition}</p>
-            <p className="text-2xl font-bold text-green-700">{weather.temp_c}°C</p>
+        {error && (
+          <div className="mt-6 p-4 bg-red-100 text-red-700 rounded-md">
+            <p>{error}</p>
           </div>
         )}
 
-        {soil && (
-          <div className="bg-white p-4 rounded-xl shadow text-center">
-            <h2 className="text-lg font-bold mb-2">💧 Soil Moisture</h2>
-            <div className="flex justify-center">
-              <ResponsiveContainer width={180} height={180}>
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: "Moisture", value: soil.moisture },
-                      { name: "Remaining", value: 100 - soil.moisture },
-                    ]}
-                    innerRadius={60}
-                    outerRadius={80}
-                    dataKey="value"
-                  >
-                    <Cell fill={COLORS[0]} />
-                    <Cell fill={COLORS[1]} />
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="mt-2 text-xl font-bold text-green-700">{soil.moisture}%</p>
+        {response && (
+          <div className="mt-6 p-4 bg-green-100 text-green-800 rounded-md">
+            <h2 className="text-lg font-semibold">Response</h2>
+            <p>{response.message}</p>
+            {response.audio_url && (
+              <div className="mt-4">
+                <audio controls className="w-full">
+                  <source src={`http://localhost:8000${response.audio_url}`} type="audio/mpeg" />
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
+            )}
           </div>
         )}
       </div>
-
-      {/* Agent Response */}
-      {agentText && (
-        <div className="mt-6 p-4 bg-white rounded shadow w-full max-w-md text-center">
-          <p className="text-green-800 font-medium">{agentText}</p>
-        </div>
-      )}
-
-      {/* Fixed bottom-right image */}
-      <div className="fixed bottom-4 right-4">
-        <Image src="/img1.png" alt="Bottom Right Image" width={80} height={80} className="rounded-full shadow-lg" />
-      </div>
-    </main>
+    </div>
   );
 }
