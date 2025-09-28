@@ -61,10 +61,12 @@ export default function AgentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <div className="bg-white shadow-lg rounded-lg p-8 max-w-2xl w-full">
+<div
+        className="relative h-screen w-full flex items-center justify-center bg-cover bg-center"
+        style={{ backgroundImage: "url(/irrigation.jpg)" }}
+      >      <div className="bg-white shadow-lg rounded-lg p-8 max-w-2xl w-full">
         <h1 className="text-3xl font-bold text-green-600 mb-6 text-center">
-          Smart Agri - Irrigation Advisor
+          Agentic Agriflow - Irrigation Advisor
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -79,19 +81,6 @@ export default function AgentPage() {
               onChange={(e) => setQuestion(e.target.value)}
               className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
               placeholder="e.g., Should Field A be irrigated in the next 48 hours?"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="audio" className="block text-sm font-medium text-gray-700">
-              Or upload an audio question
-            </label>
-            <input
-              type="file"
-              id="audio"
-              accept="audio/*"
-              onChange={handleAudioChange}
-              className="mt-1 w-full p-2 border border-gray-300 rounded-md"
             />
           </div>
 

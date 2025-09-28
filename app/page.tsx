@@ -116,7 +116,7 @@ export default function Home() {
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-dark leading-tight animate-buddies">
                 W E L C O M E <br /> T O <br />{" "}
                 <span className="text-yellow-500 animate-pulse">
-                  S M A R T <br /> A G R I
+                  A G E N T I C <br /> A G R I F L O W
                 </span>
               </h1>
             </div>
